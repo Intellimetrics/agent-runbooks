@@ -14,6 +14,8 @@ You attach it to a browser the user has already launched. The MCP never SSHes, n
 - Google Chrome and/or Microsoft Edge installed locally and/or on the remote host
 - For the remote case: SSH access to a box with the browser installed
 
+The launch commands below show the Linux binary names (`google-chrome`, `microsoft-edge`). On macOS use the full path: `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome` (or symlink it onto `$PATH`). On Windows use `chrome.exe` and replace `/tmp/...` with `%TEMP%\chrome-cdp-profile`.
+
 ## MCP server config
 
 Add to your client's MCP config (e.g. `.mcp.json` in a project, or the global Claude Code config):
@@ -42,7 +44,7 @@ google-chrome \
   >/tmp/chrome-cdp.log 2>&1 &
 ```
 
-Since Chrome 136 (April 2025), `--user-data-dir` is **mandatory** alongside `--remote-debugging-port`, even if no other Chrome is running. Without it, Chrome silently ignores the debug flag — this is post-App-Bound-Encryption malware mitigation. ([Google's announcement](https://developer.chrome.com/blog/remote-debugging-port)) Use any path that is *not* your normal profile directory. Chrome for Testing is exempt and can be installed via `npx @puppeteer/browsers install chrome@stable` if you'd rather use that.
+Since Chrome 136 (April 2025), `--user-data-dir` is **mandatory** alongside `--remote-debugging-port` on every platform, even if no other Chrome is running. Without it, Chrome silently ignores the debug flag (anti-malware hardening — see [Google's announcement](https://developer.chrome.com/blog/remote-debugging-port)). Use any path that is *not* your normal profile directory. Chrome for Testing is exempt and can be installed via `npx @puppeteer/browsers install chrome@stable` if you'd rather use that.
 
 ## Scenario 2 — Local Edge (unofficial, but works)
 
@@ -74,13 +76,14 @@ google-chrome \
 On your laptop:
 
 ```bash
-ssh -N -f -L 9222:localhost:9222 user@box
+ssh -N -f -o ExitOnForwardFailure=yes -L 9222:localhost:9222 user@box
 ```
 
 - `-L 9222:localhost:9222` forwards your local `127.0.0.1:9222` → the remote's own loopback. The browser never accepts non-SSH traffic.
 - `-N` = no remote command, `-f` = background after auth.
-- For flaky networks: `autossh -M 0 -f -N -L 9222:localhost:9222 user@box` auto-reconnects on drop.
-- For a jump host: `ssh -J jumpbox user@box -N -f -L 9222:localhost:9222`.
+- `ExitOnForwardFailure=yes` is critical — without it, `ssh -f` will silently background even when the bind fails, leaving you with a phantom SSH process and no tunnel.
+- For flaky networks: add `autossh -M 0` in front to auto-reconnect on drop.
+- For a jump host: prepend `-J jumpbox`.
 
 **File transfers in Scenario 3 are not transparent.** Uploads see the *remote* filesystem; downloads land on *remote* disk. `scp` or `rsync` round-trips are on you.
 
@@ -88,7 +91,7 @@ ssh -N -f -L 9222:localhost:9222 user@box
 
 ## `--autoConnect` (Chrome only, optional)
 
-If you'd rather not run a separate launch command, chrome-devtools-mcp's `--autoConnect` flag will connect to a Chrome browser the user has enabled via `chrome://inspect/#remote-debugging`. Requires Chrome M144+ and does not work with Edge. The manual `--browser-url` flow above is more portable.
+Chrome 144+ added a remote-debugging toggle on the `chrome://inspect` page. With that toggle on, chrome-devtools-mcp's `--autoConnect` flag attaches to your normal Chrome without you having to launch a second instance. Edge does not have this toggle. The manual `--browser-url` flow above is more portable and works across browsers and Chrome versions.
 
 ## Verify (doctor checklist)
 
