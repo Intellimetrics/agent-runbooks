@@ -2,8 +2,6 @@
 
 A runbook for driving a real CDP-speaking browser (Chrome, Edge) from a coding agent — locally or across an SSH tunnel — using Google's [`chrome-devtools-mcp`](https://github.com/ChromeDevTools/chrome-devtools-mcp).
 
-There's no server to build here. This repo exists to remember the setup.
-
 ## What you get
 
 `chrome-devtools-mcp` exposes ~45 MCP tools — navigate, click, evaluate, screenshot, console, network, lighthouse, heap snapshots, perf traces, screencasts. Full list: <https://github.com/ChromeDevTools/chrome-devtools-mcp#tools>.
@@ -12,7 +10,7 @@ You attach it to a browser the user has already launched. The MCP never SSHes, n
 
 ## Prerequisites
 
-- Node 18+ (`npx` resolves it)
+- Node 20.19+ LTS (`npx` resolves it)
 - Google Chrome and/or Microsoft Edge installed locally and/or on the remote host
 - For the remote case: SSH access to a box with the browser installed
 
@@ -44,7 +42,7 @@ google-chrome \
   >/tmp/chrome-cdp.log 2>&1 &
 ```
 
-The `--user-data-dir` is **mandatory** on Chrome 136+, even if no other Chrome is running. Without it, Chrome silently ignores `--remote-debugging-port`. ([Google's announcement](https://developer.chrome.com/blog/remote-debugging-port)) Use any path that is *not* your normal profile directory.
+Since Chrome 136 (April 2025), `--user-data-dir` is **mandatory** alongside `--remote-debugging-port`, even if no other Chrome is running. Without it, Chrome silently ignores the debug flag — this is post-App-Bound-Encryption malware mitigation. ([Google's announcement](https://developer.chrome.com/blog/remote-debugging-port)) Use any path that is *not* your normal profile directory. Chrome for Testing is exempt and can be installed via `npx @puppeteer/browsers install chrome@stable` if you'd rather use that.
 
 ## Scenario 2 — Local Edge (unofficial, but works)
 
@@ -58,16 +56,15 @@ microsoft-edge \
 
 Then point the MCP at port 9223: `--browser-url=http://127.0.0.1:9223`.
 
-Edge is **not officially supported** by chrome-devtools-mcp — PR #1229 (which added a `--browser=edge` flag) was closed without merge. But Edge speaks CDP and `--browser-url` is protocol-only, so the core verbs work. What you lose: Chrome 144+'s `--autoConnect` flow, `DevToolsActivePort` auto-discovery, and recognition of `edge://` / `edge-extension://` URL schemes (a handful of tools may misbehave on Edge-internal pages).
-
-If you only need to drive a regular web page, this is fine.
+Edge is **not officially supported** by chrome-devtools-mcp — PR [#1229](https://github.com/ChromeDevTools/chrome-devtools-mcp/pull/1229) (which added a `--browser=edge` flag) was closed without merge. But Edge speaks CDP and `--browser-url` is protocol-only, so the core verbs work. You lose `--autoConnect`, `DevToolsActivePort` auto-discovery, and recognition of `edge://` / `edge-extension://` URL schemes.
 
 ## Scenario 3 — Remote browser over SSH tunnel
 
-On the remote box:
+On the remote box (add `--headless=new` if the host has no display server — typical for Linux servers):
 
 ```bash
 google-chrome \
+  --headless=new \
   --remote-debugging-port=9222 \
   --user-data-dir=/tmp/chrome-cdp-profile \
   --no-first-run --no-default-browser-check \
@@ -85,11 +82,13 @@ ssh -N -f -L 9222:localhost:9222 user@box
 - For flaky networks: `autossh -M 0 -f -N -L 9222:localhost:9222 user@box` auto-reconnects on drop.
 - For a jump host: `ssh -J jumpbox user@box -N -f -L 9222:localhost:9222`.
 
-**Never** use `--remote-debugging-address=0.0.0.0`. Chromium [issue 40261787](https://issues.chromium.org/issues/40261787) explicitly refuses non-loopback binding as a security stance. The SSH tunnel is the sanctioned remote path.
+**File transfers in Scenario 3 are not transparent.** Uploads see the *remote* filesystem; downloads land on *remote* disk. `scp` or `rsync` round-trips are on you.
 
-## The Chrome 136+ `--user-data-dir` rule
+**Don't** use `--remote-debugging-address=0.0.0.0` to expose the port directly. Even when it binds, you have to pair it with `--remote-allow-origins=*`, at which point any local user on the box owns the browser. The SSH tunnel is the sanctioned remote path.
 
-Since Chrome 136 (April 2026), `--remote-debugging-port` is silently ignored on the *default* user-data-dir as well as on already-running profiles. Always launch with `--user-data-dir=<non-default-path>`. This is malware mitigation, not a bug — see Google's [post on the change](https://developer.chrome.com/blog/remote-debugging-port). Chrome for Testing is exempt; if you'd rather use that, install it via `npx @puppeteer/browsers install chrome@stable`.
+## `--autoConnect` (Chrome only, optional)
+
+If you'd rather not run a separate launch command, chrome-devtools-mcp's `--autoConnect` flag will connect to a Chrome browser the user has enabled via `chrome://inspect/#remote-debugging`. Requires Chrome M144+ and does not work with Edge. The manual `--browser-url` flow above is more portable.
 
 ## Verify (doctor checklist)
 
@@ -103,30 +102,27 @@ curl -s http://127.0.0.1:9222/json/version | head -5
 curl -s http://127.0.0.1:9222/json | head -20
 
 # 3. Tunnel is alive (Scenario 3 only)
-ss -ltnp | grep 9222
-
-# 4. MCP can be invoked
-npx -y chrome-devtools-mcp@latest --browser-url=http://127.0.0.1:9222 --help
+ss -ltnp 'sport = :9222'         # Linux
+lsof -nP -iTCP:9222 -sTCP:LISTEN # macOS
 ```
 
 Step 1 returning a JSON blob with `Browser` and `webSocketDebuggerUrl` is the canary. If it fails, the browser isn't listening (or the tunnel isn't up).
 
 ## Common failure modes
 
-- **`curl /json/version` returns nothing** → Chrome ignored `--remote-debugging-port`. Almost always: missing `--user-data-dir`, or another Chrome was already running on the same profile dir.
-- **`SingletonLock` error on launch** → previous Chrome died uncleanly. `rm /tmp/chrome-cdp-profile/SingletonLock` and relaunch.
-- **`bind: address already in use` on the tunnel** → leftover SSH session. `ss -ltnp | grep 9222` to find the PID, then `kill` it.
+- **`curl /json/version` returns nothing** → Chrome ignored `--remote-debugging-port`. Common causes: missing `--user-data-dir`, another Chrome owns that profile, Chrome crashed silently after launch, or (Scenario 3) tunnel is down. Check `ps aux | grep chrome` first.
+- **`SingletonLock` error on launch** → another Chrome owns that profile. Find it (`ps aux | grep chrome | grep <profile-path>`) and shut it down. Only `rm /tmp/chrome-cdp-profile/SingletonLock` if you've confirmed no process owns it.
+- **`bind: address already in use` on the tunnel** → leftover SSH process. `pgrep -f "ssh.*9222:localhost:9222"` to find it, then `kill`.
 - **Tunnel drops mid-session** → re-run the `ssh -N -f -L …` command. The MCP reconnects on the next call; you don't need to restart it.
-- **MCP connects but `take_screenshot` returns blank / black** → Wayland quirk. Launch Chrome with `--ozone-platform=x11`.
+- **MCP connects but `take_screenshot` returns blank / black** → Wayland or headless GPU issue. Try `--ozone-platform=x11` (Wayland) or `--use-gl=swiftshader` (headless servers).
 - **Edge-internal pages (`edge://settings`) misbehave** → expected. chrome-devtools-mcp doesn't recognize the `edge://` scheme. Drive regular web pages instead.
-- **Chrome 144+ `--autoConnect` "doesn't work" on Edge** → it can't. autoConnect is Chrome-only. Use `--browser-url` explicitly for Edge.
 
 ## What's not in scope
 
-- Firefox — different debugging protocol (Marionette/RDP), not CDP. Out of scope.
-- Headless cluster orchestration, BaaS comparisons (Browserbase/Browserless/Steel) — see `docs/` if/when it exists.
+- Firefox — different debugging protocol (Marionette/RDP), not CDP.
+- Headless cluster orchestration, BaaS comparisons (Browserbase/Browserless/Steel).
 - Stealth / anti-fingerprint — use a hosted service.
 
 ## License
 
-MIT. The runbook is yours to copy.
+MIT.
