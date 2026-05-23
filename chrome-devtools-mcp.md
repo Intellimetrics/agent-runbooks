@@ -115,6 +115,30 @@ google-chrome \
    > [!IMPORTANT]
    > Do NOT omit `-o ExitOnForwardFailure=yes`. This ensures the SSH command exits with a non-zero code if port forwarding fails, preventing silent background failures.
 
+### Scenario C — Local Browser, Remote CLI Agent (Reverse SSH Tunnel)
+This scenario applies when the developer is working on a local machine (e.g. Windows) but the LLM CLI tools (Antigravity, Claude Code, Codex) are running on a remote development server (e.g. Linux). The agent on the remote server must drive the browser running on the developer's Windows desktop.
+
+Because you (the agent) are running on the remote Linux server, you cannot execute commands on the developer's local Windows machine. You **MUST** output these exact instructions to the human developer and wait for them to confirm execution:
+
+1. **Launch a clean, debuggable browser instance on Windows**:
+   Open Windows Terminal (PowerShell or Command Prompt) and execute one of the following commands:
+   - **Using Microsoft Edge (Recommended to avoid clobbering primary Chrome session)**:
+     ```powershell
+     Stop-Process -Name msedge -ErrorAction SilentlyContinue
+     Start-Process msedge.exe -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=$env:TEMP\edge-cdp-profile", "--no-first-run", "--no-default-browser-check"
+     ```
+   - **Using Google Chrome**:
+     ```powershell
+     Stop-Process -Name chrome -ErrorAction SilentlyContinue
+     Start-Process chrome.exe -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=$env:TEMP\chrome-cdp-profile", "--no-first-run", "--no-default-browser-check"
+     ```
+2. **Open the Reverse SSH Tunnel from Windows**:
+   From Windows Terminal, connect to the remote Linux server while forwarding the remote port 9222 back to the Windows local debugging port 9222:
+   ```cmd
+   ssh -R 9222:localhost:9222 user@remote_linux_box
+   ```
+   Keep this terminal session open to maintain the tunnel. The remote LLM agent will now be able to communicate with the Windows browser on port 9222 via loopback.
+
 ---
 
 ## 🩺 Phase 4: Health Check & Verification
