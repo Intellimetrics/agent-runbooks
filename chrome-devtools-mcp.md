@@ -1,25 +1,61 @@
-# periscope
+# Agent Runbook — Chrome DevTools MCP Integration
 
-A runbook for driving a real CDP-speaking browser (Chrome, Edge) from a coding agent — locally or across an SSH tunnel — using Google's [`chrome-devtools-mcp`](https://github.com/ChromeDevTools/chrome-devtools-mcp).
+This document contains executable instructions for agentic coding tools (such as Antigravity, Claude Code, and Codex) to set up and drive a CDP-speaking browser (Chrome, Edge) locally or over an SSH tunnel.
 
-## What you get
+---
 
-`chrome-devtools-mcp` exposes ~45 MCP tools — navigate, click, evaluate, screenshot, console, network, lighthouse, heap snapshots, perf traces, screencasts. Full list: <https://github.com/ChromeDevTools/chrome-devtools-mcp#tools>.
+## 🎯 What You Get
+After completing this setup, the host agent gains the ability to interact directly with an active browser instance using Chrome DevTools Protocol (CDP) through ~45 specialized tools, including:
+- **Navigation & Querying**: `navigate_page`, `evaluate_script`, `take_snapshot`
+- **User Actions**: `click`, `hover`, `type_text`, `press_key`, `drag`
+- **Performance & Diagnostics**: `lighthouse_audit`, `take_memory_snapshot`, `performance_analyze_insight`
+- **Session Media**: `take_screenshot`
 
-You attach it to a browser the user has already launched. The MCP never SSHes, never launches a remote process, never escalates. All privileged steps are commands the user runs.
+---
 
-## Prerequisites
+## 🎯 Target Audience (Agents Only)
+> [!NOTE]
+> This runbook is structured specifically for LLM-based CLI agents. When tasked with setting up or debugging browser automation tools, read and execute the phases below in sequence using your workspace tools.
 
-- Node 20.19+ LTS (`npx` resolves it)
-- Google Chrome and/or Microsoft Edge installed locally and/or on the remote host
-- For the remote case: SSH access to a box with the browser installed
+---
 
-The launch commands below show the Linux binary names (`google-chrome`, `microsoft-edge`). On macOS use the full path: `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome` (or symlink it onto `$PATH`). On Windows use `chrome.exe` and replace `/tmp/...` with `%TEMP%\chrome-cdp-profile`.
+## 🔍 Phase 1: Environment Discovery
+Before applying configurations, run local diagnostic commands to verify the environment.
 
-## MCP server config
+1. **Verify Node.js Version**:
+   - Command: `node --version`
+   - Expect: `^20.19.0 \|\| ^22.12.0 \|\| >=23` (matching the package engine specifications)
+2. **Determine Chrome/Edge Binary Location**:
+   - **Linux**:
+     - Command: `which google-chrome || which google-chrome-stable` (Expected output: `/usr/bin/google-chrome` or similar)
+     - Command: `which microsoft-edge || which microsoft-edge-stable`
+   - **macOS**:
+     - Typical Chrome path: `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+     - Typical Edge path: `/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge`
+   - **Windows**:
+     - Typical Chrome path: `C:\Program Files\Google\Chrome\Application\chrome.exe`
+     - Typical Edge path: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
+3. **Verify Port Availability**:
+   - Check if port `9222` (default) or `9223` (alternative) is already bound:
+     - Linux: `ss -ltnp 'sport = :9222'`
+     - macOS: `lsof -nP -iTCP:9222 -sTCP:LISTEN`
+     - Windows: `netstat -ano | findstr :9222`
 
-Add to your client's MCP config (e.g. `.mcp.json` in a project, or the global Claude Code config):
+---
 
+## ⚙️ Phase 2: Configuration Injection
+Select the configuration appropriate for the host LLM client. Merges must be performed carefully without destroying existing servers.
+
+> [!WARNING]
+> Environment variable interpolation (e.g. `${VAR}`) is natively supported in Claude Code's `.mcp.json` but may not be supported by Codex's `config.toml` or Antigravity's `mcp_config.json`. If your client does not support interpolation, you must write the literal value or run the agent CLI with the environment variable set in the parent terminal.
+
+### 1. Antigravity & Claude Code
+Both tools support `.mcp.json` (project-scoped) or global JSON configurations.
+- **Antigravity Global path**: `~/.gemini/antigravity-cli/mcp_config.json`
+- **Claude Code Global path**: `~/.claude.json`
+- **Project-scoped path**: `.mcp.json` (at project root)
+
+JSON snippet to merge:
 ```json
 {
   "mcpServers": {
@@ -32,10 +68,24 @@ Add to your client's MCP config (e.g. `.mcp.json` in a project, or the global Cl
 }
 ```
 
-`--browser-url` tells the MCP to attach to an existing browser at that CDP endpoint instead of launching its own. Same config works for local Chrome, local Edge, and a remote browser reached through an SSH tunnel — the URL is always `http://127.0.0.1:9222` from the agent's perspective.
+### 2. Codex
+Codex uses TOML configuration.
+- **Global path**: `~/.codex/config.toml`
+- **Project-scoped path**: `.codex/config.toml`
 
-## Scenario 1 — Local Chrome
+TOML table to merge:
+```toml
+[mcp_servers.chrome_devtools]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest", "--browser-url=http://127.0.0.1:9222"]
+```
 
+---
+
+## 🚀 Phase 3: Background Service Automation
+
+### Scenario A — Local Chrome Launch
+Since Chrome 136, `--user-data-dir` is **mandatory** for remote debugging. Execute this command to spawn the browser:
 ```bash
 google-chrome \
   --remote-debugging-port=9222 \
@@ -44,88 +94,59 @@ google-chrome \
   >/tmp/chrome-cdp.log 2>&1 &
 ```
 
-Since Chrome 136 (April 2025), `--user-data-dir` is **mandatory** alongside `--remote-debugging-port` on every platform, even if no other Chrome is running. Without it, Chrome silently ignores the debug flag (anti-malware hardening — see [Google's announcement](https://developer.chrome.com/blog/remote-debugging-port)). Use any path that is *not* your normal profile directory. Chrome for Testing is exempt and can be installed via `npx @puppeteer/browsers install chrome@stable` if you'd rather use that.
+> [!IMPORTANT]
+> **Microsoft Edge Port Coordination**: For Microsoft Edge, replace `google-chrome` with `microsoft-edge`, change the port to `9223` (if 9222 is busy), and use `--user-data-dir=/tmp/edge-cdp-profile`. 
+> If you change the debugging port to `9223`, you **MUST** update the Phase 2 MCP configuration's `--browser-url` to match: `--browser-url=http://127.0.0.1:9223`.
 
-## Scenario 2 — Local Edge (unofficial, but works)
+### Scenario B — Remote Browser over SSH Tunnel
+1. **Launch browser on the remote server** (add `--headless=new` if no GUI display is present):
+   ```bash
+   google-chrome \
+     --headless=new \
+     --remote-debugging-port=9222 \
+     --user-data-dir=/tmp/chrome-cdp-profile \
+     --no-first-run --no-default-browser-check \
+     >/tmp/chrome-cdp.log 2>&1 &
+   ```
+2. **Establish the tunnel from the local machine**:
+   ```bash
+   ssh -N -f -o ExitOnForwardFailure=yes -L 9222:localhost:9222 user@remote_host
+   ```
+   > [!IMPORTANT]
+   > Do NOT omit `-o ExitOnForwardFailure=yes`. This ensures the SSH command exits with a non-zero code if port forwarding fails, preventing silent background failures.
 
-```bash
-microsoft-edge \
-  --remote-debugging-port=9223 \
-  --user-data-dir=/tmp/edge-cdp-profile \
-  --no-first-run --no-default-browser-check \
-  >/tmp/edge-cdp.log 2>&1 &
-```
+---
 
-Then point the MCP at port 9223: `--browser-url=http://127.0.0.1:9223`.
+## 🩺 Phase 4: Health Check & Verification
+Run these verification commands to ensure the browser and tunnel are fully responsive before attempting tool usage.
 
-Edge is **not officially supported** by chrome-devtools-mcp — PR [#1229](https://github.com/ChromeDevTools/chrome-devtools-mcp/pull/1229) (which added a `--browser=edge` flag) was closed without merge. But Edge speaks CDP and `--browser-url` is protocol-only, so the core verbs work. You lose `--autoConnect`, `DevToolsActivePort` auto-discovery, and recognition of `edge://` / `edge-extension://` URL schemes.
+1. **Verify HTTP Discovery Endpoint**:
+   - Command: `curl -s http://127.0.0.1:9222/json/version`
+   - Validation criteria: The response must contain key-value pairs for `"Browser":` and `"webSocketDebuggerUrl":`.
+2. **Verify Active Targets**:
+   - Command: `curl -s http://127.0.0.1:9222/json`
+   - Validation criteria: The response must be a valid JSON array of open browser pages/targets.
+3. **Verify Tunnel/Port Bind**:
+   - Linux: `ss -ltnp 'sport = :9222'`
+   - macOS: `lsof -nP -iTCP:9222 -sTCP:LISTEN`
 
-## Scenario 3 — Remote browser over SSH tunnel
+---
 
-On the remote box (add `--headless=new` if the host has no display server — typical for Linux servers):
+## 🛠️ Phase 5: Automated Troubleshooting
 
-```bash
-google-chrome \
-  --headless=new \
-  --remote-debugging-port=9222 \
-  --user-data-dir=/tmp/chrome-cdp-profile \
-  --no-first-run --no-default-browser-check \
-  >/tmp/chrome-cdp.log 2>&1 &
-```
+> [!CAUTION]
+> **Safety First**: The troubleshooting steps below contain process termination (`kill`) and directory cleanup (`rm -rf`) commands. You **MUST** prompt the human operator for explicit confirmation before running these destructive actions.
 
-On your laptop:
+| Issue / Symptom | Root Cause | Automated Resolution Command / Step |
+| :--- | :--- | :--- |
+| **`curl` returns no output** or connection refused. | Browser crashed or debugging flag was ignored due to missing `--user-data-dir`. | 1. Check `/tmp/chrome-cdp.log` for logs.<br>2. Run `ps aux \| grep chrome` to verify processes exist.<br>3. **Destructive Action** (wipes saved browser sessions/cookies): `rm -rf /tmp/chrome-cdp-profile && google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-cdp-profile --no-first-run &`. |
+| **`SingletonLock` error** in log. | A previous crash left a lockfile, or another Chrome process is sharing the profile. | 1. Search for existing processes: `ps aux \| grep chrome \| grep /tmp/chrome-cdp-profile`.<br>2. If none exist, delete the lockfile: `rm -f /tmp/chrome-cdp-profile/SingletonLock`. |
+| **SSH bind failure**: `Address already in use`. | A zombie SSH tunnel is already occupying port 9222. | 1. Locate the PID: `pgrep -f "ssh.*9222:localhost:9222"`.<br>2. Terminate the process cleanly: `kill $(pgrep -f "ssh.*9222:localhost:9222")`. Use `kill -9` only as a last resort. |
+| **Blank / Black screenshots** from `take_screenshot`. | Headless rendering issues under Wayland or virtual display. | Add Ozone/GL fallback flags to the chrome launch command:<br>`--ozone-platform=x11 --use-gl=swiftshader` |
 
-```bash
-ssh -N -f -o ExitOnForwardFailure=yes -L 9222:localhost:9222 user@box
-```
+---
 
-- `-L 9222:localhost:9222` forwards your local `127.0.0.1:9222` → the remote's own loopback. The browser never accepts non-SSH traffic.
-- `-N` = no remote command, `-f` = background after auth.
-- `ExitOnForwardFailure=yes` is critical — without it, `ssh -f` will silently background even when the bind fails, leaving you with a phantom SSH process and no tunnel.
-- For flaky networks: add `autossh -M 0` in front to auto-reconnect on drop.
-- For a jump host: prepend `-J jumpbox`.
-
-**File transfers in Scenario 3 are not transparent.** Uploads see the *remote* filesystem; downloads land on *remote* disk. `scp` or `rsync` round-trips are on you.
-
-**Don't** use `--remote-debugging-address=0.0.0.0` to expose the port directly. Even when it binds, you have to pair it with `--remote-allow-origins=*`, at which point any local user on the box owns the browser. The SSH tunnel is the sanctioned remote path.
-
-## `--autoConnect` (Chrome only, optional)
-
-Chrome 144+ added a remote-debugging toggle on the `chrome://inspect` page. With that toggle on, chrome-devtools-mcp's `--autoConnect` flag attaches to your normal Chrome without you having to launch a second instance. Edge does not have this toggle. The manual `--browser-url` flow above is more portable and works across browsers and Chrome versions.
-
-## Verify (doctor checklist)
-
-Run these on the machine where the agent's MCP runs — i.e. with the tunnel in place if you're using Scenario 3.
-
-```bash
-# 1. CDP HTTP discovery responds
-curl -s http://127.0.0.1:9222/json/version | head -5
-
-# 2. There's at least one open target
-curl -s http://127.0.0.1:9222/json | head -20
-
-# 3. Tunnel is alive (Scenario 3 only)
-ss -ltnp 'sport = :9222'         # Linux
-lsof -nP -iTCP:9222 -sTCP:LISTEN # macOS
-```
-
-Step 1 returning a JSON blob with `Browser` and `webSocketDebuggerUrl` is the canary. If it fails, the browser isn't listening (or the tunnel isn't up).
-
-## Common failure modes
-
-- **`curl /json/version` returns nothing** → Chrome ignored `--remote-debugging-port`. Common causes: missing `--user-data-dir`, another Chrome owns that profile, Chrome crashed silently after launch, or (Scenario 3) tunnel is down. Check `ps aux | grep chrome` first.
-- **`SingletonLock` error on launch** → another Chrome owns that profile. Find it (`ps aux | grep chrome | grep <profile-path>`) and shut it down. Only `rm /tmp/chrome-cdp-profile/SingletonLock` if you've confirmed no process owns it.
-- **`bind: address already in use` on the tunnel** → leftover SSH process. `pgrep -f "ssh.*9222:localhost:9222"` to find it, then `kill`.
-- **Tunnel drops mid-session** → re-run the `ssh -N -f -L …` command. The MCP reconnects on the next call; you don't need to restart it.
-- **MCP connects but `take_screenshot` returns blank / black** → Wayland or headless GPU issue. Try `--ozone-platform=x11` (Wayland) or `--use-gl=swiftshader` (headless servers).
-- **Edge-internal pages (`edge://settings`) misbehave** → expected. chrome-devtools-mcp doesn't recognize the `edge://` scheme. Drive regular web pages instead.
-
-## What's not in scope
-
-- Firefox — different debugging protocol (Marionette/RDP), not CDP.
-- Headless cluster orchestration, BaaS comparisons (Browserbase/Browserless/Steel).
-- Stealth / anti-fingerprint — use a hosted service.
-
-## License
-
-MIT.
+## 🚫 Out of Scope
+- Firefox or other non-CDP browsers.
+- Microsoft Edge-specific settings pages (e.g. `edge://settings`), which are not fully supported by `chrome-devtools-mcp`.
+- Direct remote debugging configurations without SSH tunnel forwarding (security hazard).
