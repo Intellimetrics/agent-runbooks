@@ -13,6 +13,31 @@ After completing this setup, the host agent gains the ability to interact direct
 
 ---
 
+## 🧑‍💻 Human Operator Setup (Scenario C Quick Start)
+If you are a human developer working on a local machine (e.g. Windows) but running your coding agent (Antigravity, Claude Code, Codex) on a remote development box (e.g. Linux), you **must** run these commands on your local machine to establish the browser debugging channel:
+
+1. **Start Microsoft Edge / Google Chrome with remote debugging on Windows**:
+   Open Windows Terminal (PowerShell) and execute:
+   - **Microsoft Edge (Recommended)**:
+     ```powershell
+     Stop-Process -Name msedge -ErrorAction SilentlyContinue
+     Start-Process msedge.exe -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=$env:TEMP\edge-cdp-profile", "--no-first-run", "--no-default-browser-check"
+     ```
+   - **Google Chrome**:
+     ```powershell
+     Stop-Process -Name chrome -ErrorAction SilentlyContinue
+     Start-Process chrome.exe -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=$env:TEMP\chrome-cdp-profile", "--no-first-run", "--no-default-browser-check"
+     ```
+
+2. **Open the Reverse SSH Tunnel from Windows**:
+   Open a separate Windows Terminal window and connect to your remote Linux box while forwarding port 9222:
+   ```cmd
+   ssh -R 9222:localhost:9222 user@remote_linux_box
+   ```
+   Keep this session open. Once done, tell your remote coding agent to read this runbook and proceed with configuration checks.
+
+---
+
 ## 🎯 Target Audience (Agents Only)
 > [!NOTE]
 > This runbook is structured specifically for LLM-based CLI agents. When tasked with setting up or debugging browser automation tools, read and execute the phases below in sequence using your workspace tools.
