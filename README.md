@@ -33,6 +33,7 @@ Once prompted, the agent will follow the 5 phases inside the runbook without fur
 - 🧪 **[automated-testing-runbook](automated-testing-runbook.md)** — Set up Playwright for robust browser-based End-to-End (E2E) testing.
 - 🌳 **[gitflow-runbook](gitflow-runbook.md)** — Agent-executable instructions for managing feature branches and PRs using a Gitflow-inspired model and `gh` CLI.
 - 📝 **[plan-to-plan-runbook](plan-to-plan-runbook.md)** — Meta-workflow guiding agents to break down large, ambiguous requests into smaller planning sessions instead of jumping straight into coding.
+- 🤖 **[orchestrator-subagent-runbook](orchestrator-subagent-runbook.md)** — Strategies and execution steps for orchestrator agents to delegate discrete tasks to subagents, preserving their 200k+ token context windows.
 
 ---
 
