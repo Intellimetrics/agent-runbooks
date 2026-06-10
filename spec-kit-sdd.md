@@ -24,9 +24,9 @@ Before applying SDD configurations, run diagnostic checks to identify existing c
 1. **Verify if `specify` CLI is Installed**:
    - Command: `which specify`
    - Expect: `/usr/local/bin/specify` or similar.
-2. **Verify Python & Node environments**:
-   - Command: `python3 --version && node -v`
-   - Expect: Python `>= 3.11` and Node `>= 20`.
+2. **Verify Python environment**:
+   - Command: `python3 --version`
+   - Expect: Python `>= 3.11`. (Specify is a Python/uv tool — Node is only needed by whichever agent CLI you integrate, not by Specify itself.)
 3. **Verify Git Repository presence**:
    - Command: `git rev-parse --is-inside-work-tree`
    - Expect: `true` (Spec Kit operates on git-controlled repositories).
@@ -62,11 +62,11 @@ Choose your preferred installation method depending on system support:
   ```
 
 ### 2. Initialize Spec Kit in Project Root
-Initialize Spec Kit in the current directory. You can specify the target AI client using either the `--ai` flag or the `--integration` flag (they are mutually exclusive):
+Initialize Spec Kit in the current directory. Prefer the `--integration` flag (the new integration system); `--ai` is the legacy flag and is mutually exclusive with it:
 ```bash
-specify init . --ai gemini
+specify init . --integration claude
 ```
-*Note: Swap `gemini` with your client agent name (e.g. `claude`, `codex`) to generate client-specific skill manifests.*
+*Note: Swap `claude` with your client agent name (e.g. `gemini`, `codex`, `agy`) to generate client-specific skill manifests.*
 
 ---
 

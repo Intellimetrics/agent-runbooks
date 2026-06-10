@@ -16,6 +16,9 @@ After completing this setup, the host agent gains sandboxed environment executio
 > [!NOTE]
 > This runbook is structured specifically for LLM-based CLI agents. When tasked with running scripts, installing npm/pip packages, or compiling code, execute the phases below in sequence.
 
+> [!WARNING]
+> **Upstream staleness**: the Automata Labs `code-sandbox-mcp` project has had no commits since March 2025. Before installing, check repo activity (`gh api repos/Automata-Labs-team/code-sandbox-mcp --jq .pushed_at`) and prefer your agent's NATIVE sandboxing when available (Claude Code ships built-in sandboxed Bash; Codex has `--sandbox` modes). The raw `docker run` isolation pattern in Phase 4 works without any MCP server at all.
+
 ---
 
 ## 🔍 Phase 1: Environment Discovery

@@ -1,6 +1,6 @@
-# Agent Runbook — PostgreSQL & Database MCP Integration
+# Agent Runbook — PostgreSQL MCP Integration
 
-This document contains executable instructions for agentic coding tools (such as Antigravity, Claude Code, and Codex) to connect to, query, and inspect databases (PostgreSQL, MySQL) locally or via SSH port forwarding.
+This document contains executable instructions for agentic coding tools (such as Antigravity, Claude Code, and Codex) to connect to, query, and inspect PostgreSQL databases locally or via SSH port forwarding.
 
 ---
 
@@ -22,12 +22,12 @@ After completing this setup, the host agent gains database inspection and query 
 Before applying database configurations, run diagnostic checks to identify existing configurations.
 
 1. **Check for Database CLI Client**:
-   - Command: `which psql || which mysql`
+   - Command: `which psql`
 2. **Identify Active Database Port**:
-   - Locate if port `5432` (Postgres) or `3306` (MySQL) is active:
-     - Linux: `ss -ltnp '( sport = :5432 or sport = :3306 )'`
-     - macOS: `lsof -nP -i :5432 -i :3306 -sTCP:LISTEN`
-     - Windows: `netstat -ano | findstr "5432 3306"`
+   - Locate if port `5432` is active:
+     - Linux: `ss -ltnp 'sport = :5432'`
+     - macOS: `lsof -nP -i :5432 -sTCP:LISTEN`
+     - Windows: `netstat -ano | findstr "5432"`
 
 ---
 
@@ -100,8 +100,9 @@ ssh -N -f -o ExitOnForwardFailure=yes -L 5432:localhost:5432 user@db-server
    - Command: `pg_isready -h localhost -p 5432`
    - Expect: `localhost:5432 - accepting connections` (Note: no leading slash)
 2. **Dry-Run MCP Server Connection**:
-   - Command: `uvx postgres-mcp postgresql://postgres:postgres@localhost:5432/dev_db --access-mode=unrestricted`
+   - Command: `uvx postgres-mcp postgresql://postgres:postgres@localhost:5432/dev_db --access-mode=restricted`
    - Expect: Process runs and awaits JSON-RPC input (doesn't exit immediately with a connection failure).
+   - Note: `restricted` is the safe read-leaning mode. Pass `--access-mode=unrestricted` only when the human has explicitly authorized writes/migrations.
 
 ---
 
@@ -119,6 +120,7 @@ ssh -N -f -o ExitOnForwardFailure=yes -L 5432:localhost:5432 user@db-server
 ---
 
 ## 🚫 Out of Scope
+- MySQL/MariaDB — the CrystalDBA `postgres-mcp` server speaks PostgreSQL only; use a dedicated MySQL MCP server if needed.
 - Production database replication and clustering setups.
 - Database backups and restoration management.
 - Exposing databases to public network interfaces directly (non-secure).

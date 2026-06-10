@@ -23,7 +23,7 @@ Before applying configurations, run diagnostic checks to identify existing confi
 
 1. **Verify if Node.js is installed**:
    - Command: `node -v`
-   - Expect: `v18.x.x` or higher.
+   - Expect: `v20.x.x` or higher (Node 18 is EOL and dropped by recent Playwright releases).
 2. **Verify Playwright presence**:
    - Command: `npx playwright --version`
    - Expect: Playwright CLI version output. If not found, it will be installed in Phase 3.
@@ -61,7 +61,7 @@ export default defineConfig({
 ## 🚀 Phase 3: Background Service Automation
 
 1. **Install Playwright and Browsers**:
-   - Command: `npm init playwright@latest -y` (if starting fresh) or `npx playwright install --with-deps` (if adding to an existing project).
+   - Command: `npm init playwright@latest -- --quiet` (if starting fresh; the `-- --quiet` suffix accepts defaults — without it, the initializer hangs an agent on interactive prompts) or `npx playwright install --with-deps` (if adding to an existing project).
 2. **Create Dummy Test**:
    - Command: `mkdir -p tests && echo "import { test, expect } from '@playwright/test'; test('basic test', async ({ page }) => { await page.goto('https://playwright.dev/'); await expect(page).toHaveTitle(/Playwright/); });" > tests/example.spec.ts`
 

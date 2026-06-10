@@ -58,10 +58,13 @@ Example Task List:
 
 ## 🛠️ Phase 5: Automated Troubleshooting
 
+> [!CAUTION]
+> **Safety First**: The resolution below includes `git reset --hard`, which destroys ALL uncommitted work in the repository — not just the agent's own changes. You **MUST** prompt the human operator for explicit confirmation before running it; prefer reverting only the specific files you touched.
+
 | Issue / Symptom | Root Cause | Automated Resolution Command / Step |
 | :--- | :--- | :--- |
 | **Scope Creep** | The user asks for a massive addition during the review. | 1. Acknowledge the addition. <br>2. Add it as a new task with `[Requires Planning Session]`. |
-| **Agent begins writing code early** | The agent failed to stay in Planning Mode. | 1. Discard code changes (e.g., `git reset --hard`). <br>2. Refocus strictly on updating the `epic.md`. |
+| **Agent begins writing code early** | The agent failed to stay in Planning Mode. | 1. Discard code changes (e.g., `git checkout -- <files you modified>`, or `git reset --hard` with human confirmation). <br>2. Refocus strictly on updating the `epic.md`. |
 
 ---
 

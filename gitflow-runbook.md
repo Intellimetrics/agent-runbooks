@@ -15,6 +15,9 @@ After completing this setup, you can robustly manage feature work and releases.
 > [!NOTE]
 > This runbook is structured specifically for LLM-based CLI agents. When tasked with creating features or submitting work, execute the phases below in sequence.
 
+> [!IMPORTANT]
+> **Scope gate**: This runbook is ONLY for repositories that already use (or whose owner has explicitly requested) a `develop`-branch flow. Many repos are trunk-based — single `main`, direct commits. If `develop` does not exist and the user has not asked for Gitflow, STOP here and follow the repo's existing convention instead. Do not introduce `develop`/`feature/*` ceremony on your own initiative.
+
 ---
 
 ## 🔍 Phase 1: Environment Discovery
@@ -34,7 +37,7 @@ Before applying configurations, check existing repository state.
 
 ## ⚙️ Phase 2: Configuration Injection
 
-Ensure that the repository has a `develop` branch. If it does not exist, create it from `main`.
+Ensure that the repository has a `develop` branch. If it does not exist AND the user has explicitly requested Gitflow, create it from `main` (otherwise stop — see the scope gate above).
 
 ```bash
 git checkout main
@@ -58,7 +61,9 @@ Follow these commands when implementing a new feature:
    ```
 2. **Commit Changes**:
    ```bash
-   git add .
+   # Stage the specific files you changed — avoid `git add .`, which can
+   # sweep in unrelated junk (logs, local configs, build artifacts).
+   git add path/to/changed_file_1 path/to/changed_file_2
    # Follow Conventional Commits formatting
    git commit -m "feat: descriptive message"
    ```

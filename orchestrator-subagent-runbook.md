@@ -20,7 +20,7 @@ When executing large or prolonged projects, the main orchestrator agent risks bl
 ## 🔍 Phase 1: Environment Discovery
 
 1. **Identify Subagent Capabilities**:
-   - Action: Review your available tool schemas (e.g., `invoke_subagent`, `define_subagent`, or equivalent platform native capabilities).
+   - Action: Review your available tool schemas for an agent-spawning tool. The name varies by platform — Claude Code exposes it as the `Task` (a.k.a. `Agent`) tool with `subagent_type` and `run_in_background` parameters; other CLIs ship their own equivalents (look for "agent", "subagent", or "delegate" in your tool list).
    - Expect: Confirmation that you have the capability to spawn background agents.
 
 ---
@@ -47,7 +47,7 @@ Deliverable: Update the file and reply with a summary of the UI components added
 ## 🚀 Phase 3: Background Service Automation
 
 1. **Invoke the Subagent**:
-   - Action: Use your `invoke_subagent` (or equivalent) tool to launch the agent.
+   - Action: Use your platform's subagent tool (Claude Code: `Task`/`Agent`; other CLIs: their equivalent) to launch the agent.
    - Parameters: Assign a specific role (e.g., "Frontend Developer", "Codebase Researcher") and pass the drafted prompt.
    - Workspace: Inherit or share the parent workspace unless isolated branching is required.
 

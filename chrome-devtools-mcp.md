@@ -8,7 +8,7 @@ This document contains executable instructions for agentic coding tools (such as
 After completing this setup, the host agent gains the ability to interact directly with an active browser instance using Chrome DevTools Protocol (CDP) through ~45 specialized tools, including:
 - **Navigation & Querying**: `navigate_page`, `evaluate_script`, `take_snapshot`
 - **User Actions**: `click`, `hover`, `type_text`, `press_key`, `drag`
-- **Performance & Diagnostics**: `lighthouse_audit`, `take_memory_snapshot`, `performance_analyze_insight`
+- **Performance & Diagnostics**: `lighthouse_audit`, `take_heapsnapshot`, `performance_analyze_insight`
 - **Session Media**: `take_screenshot`
 
 ---

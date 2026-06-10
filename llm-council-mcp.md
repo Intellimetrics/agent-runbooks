@@ -9,6 +9,7 @@ After configuring this integration, the host agent can trigger a multi-model rev
 - **Parallel Deliberation**: Solicit independent verdicts (`yes` / `no` / `tradeoff`) from multiple frontier and local models simultaneously.
 - **Automated Synthesis**: Summarize peer findings, identify consensus blocks, and write markdown transcripts of votes.
 - **Risk Assessment**: Estimate prompt token costs and pre-flight feasibility before running expensive review passes.
+- **Memory Across Runs**: Query prior council rulings before paying for a fresh run (`council_query_transcripts` MCP tool), and close the loop afterwards with `llm-council outcome mark <run-id> --decision shipped|reverted|rejected` to build per-peer reliability stats (`llm-council stats --reliability`).
 
 ---
 
@@ -35,6 +36,10 @@ Before configuring the MCP server, verify the CLI tool is available or install i
 ---
 
 ## ⚙️ Phase 2: Configuration Injection
+
+> [!TIP]
+> **Fastest path — use the built-in wizard.** `llm-council setup --plan` shows what it would write (dry-run); `llm-council setup --yes --preset tri-cli` then writes `.llm-council.yaml`, `.mcp.json`, AND per-CLI instruction snippets (`.llm-council/instructions/`) in one shot. The manual configs below are for clients the wizard doesn't cover or for careful merges into existing files.
+
 Select the configuration appropriate for the host LLM client. Merges must be performed carefully without destroying existing servers.
 
 > [!WARNING]
@@ -117,6 +122,9 @@ llm-council run \
   "Review the current changes for syntax errors, logical bugs, and style conformity."
 ```
 
+### Scenario C — Check Prior Rulings Before Re-Running (MCP)
+Before launching an expensive run, call the `council_query_transcripts` MCP tool with your question. If a close prior match exists, reuse its transcript or continue it (`continuation_id`) instead of paying for a fresh consultation.
+
 ---
 
 ## 🛠️ Phase 5: Troubleshooting & Fallbacks
@@ -124,8 +132,8 @@ llm-council run \
 | Error Symptom | Diagnostics | Resolution Step |
 | :--- | :--- | :--- |
 | **`OPENROUTER_API_KEY` missing error** | Run `echo $OPENROUTER_API_KEY` or check client `.env` | Ensure the key is set and exported, or pass it explicitly in the MCP environment block. |
-| **Timeout during deliberation** | Large prompt size or slow model response. | 1. Estimate cost first: `llm-council estimate --mode review "Review description..."`. (Note: question is passed positionally).<br>2. Restrict context files to high-relevance files.<br>3. Set `--tier fast` or run in `quick` mode. |
-| **Model quota exhausted** | Error contains `quota_exhausted` or HTTP `429`. | Set up `fallback_chain` in local `.llm-council.yaml` or run with `--tier cheap` to bypass premium models. |
+| **Timeout during deliberation** | Large prompt size or slow model response. | 1. Estimate cost first: `llm-council estimate --mode review "Review description..."`. (Note: question is passed positionally).<br>2. Restrict context files to high-relevance files.<br>3. Run in the built-in `quick` or `review-cheap` mode. (No tiers ship by default — `--tier <name>` only works after you define `defaults.tiers.<name>` in `.llm-council.yaml`.) |
+| **Model quota exhausted** | Error contains `quota_exhausted` or HTTP `429`. | Set up `fallback_chain` in local `.llm-council.yaml` or switch to the built-in `review-cheap` mode to bypass premium models. |
 
 ---
 
@@ -144,7 +152,7 @@ participants:
 
 modes:
   custom-audit:
-    peers: ["claude", "local_llama", "deepseek_chat"]
+    participants: ["claude", "local_llama", "deepseek_chat"]
 ```
 
 ---

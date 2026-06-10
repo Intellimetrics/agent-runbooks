@@ -16,6 +16,9 @@ After completing this setup, you gain tools to interface directly with GitHub re
 > [!NOTE]
 > This runbook is structured specifically for LLM-based CLI agents. When tasked with creating a pull request, searching issues, or fetching repository data, execute the phases below in sequence.
 
+> [!TIP]
+> **Check whether you need this at all.** If your agent already has shell access, the `gh` CLI covers most of this surface (issues, PRs, search, `gh api`) using the user's existing login. Set up the MCP server only when shell access is restricted or you need the typed tool surface.
+
 ---
 
 ## 🔍 Phase 1: Environment Discovery
@@ -30,6 +33,9 @@ Before applying configurations, run diagnostic checks to identify existing confi
 3. **Verify Environment Variables**:
    - Command: `echo "${GITHUB_PERSONAL_ACCESS_TOKEN:-$GITHUB_TOKEN}"`
    - Expect: A non-empty token string on stdout.
+4. **Verify Docker (required for the local server form)**:
+   - Command: `docker info`
+   - Expect: Daemon details. If Docker is unavailable, use the hosted remote endpoint (Phase 2, Claude Code alternative) or fall back to `gh` directly.
 
 ---
 
@@ -37,9 +43,9 @@ Before applying configurations, run diagnostic checks to identify existing confi
 Select the configuration appropriate for the host LLM client. Merges must be performed carefully without destroying existing servers.
 
 > [!IMPORTANT]
-> **Legacy vs. Modern Official Server**:
-> 1. **Legacy server** (`@modelcontextprotocol/server-github` via npm/npx) is deprecated but commonly used. It requires the **`GITHUB_PERSONAL_ACCESS_TOKEN`** environment variable.
-> 2. **Modern official server** (`github-mcp-server` via Go/Docker) is actively maintained by GitHub. It accepts either **`GITHUB_TOKEN`** or `GITHUB_PERSONAL_ACCESS_TOKEN`.
+> **Do NOT install the legacy npm server.** `@modelcontextprotocol/server-github` is hard-deprecated on npm ("Package no longer supported"). Use GitHub's **official server** instead, in one of two forms:
+> 1. **Local Docker** (works with every client below): image `ghcr.io/github/github-mcp-server`, authenticated via **`GITHUB_PERSONAL_ACCESS_TOKEN`**.
+> 2. **Hosted remote endpoint** (no local install; for clients with HTTP/streamable MCP support, e.g. Claude Code): `https://api.githubcopilot.com/mcp/` with the PAT as a Bearer token.
 > 
 > Environment variable interpolation (e.g. `${VAR}`) is natively supported in Claude Code's `.mcp.json` but is not supported by Codex's `config.toml` or Antigravity's `mcp_config.json`.
 
@@ -47,20 +53,26 @@ Select the configuration appropriate for the host LLM client. Merges must be per
 - **Global path**: `~/.claude.json`
 - **Project-scoped path**: `.mcp.json` (at project root)
 
-JSON snippet to merge:
+JSON snippet to merge (local Docker form):
 ```json
 {
   "mcpServers": {
     "github-mcp": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
 }
+```
+
+Alternative (hosted remote, no Docker required):
+```bash
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ \
+  --header "Authorization: Bearer $GITHUB_PERSONAL_ACCESS_TOKEN"
 ```
 
 ### 2. Antigravity
@@ -73,8 +85,8 @@ JSON snippet to merge (replace `"your_token_here"` with your actual Personal Acc
   "mcpServers": {
     "github-mcp": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
       }
@@ -90,8 +102,8 @@ JSON snippet to merge (replace `"your_token_here"` with your actual Personal Acc
 TOML table to merge (replace `"your_token_here"` with your actual Personal Access Token):
 ```toml
 [mcp_servers.github_mcp]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-github"]
+command = "docker"
+args = ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"]
 # Note: Codex TOML config files do not support environment variable expansion.
 # You MUST replace "your_token_here" with your actual Personal Access Token.
 env = { "GITHUB_PERSONAL_ACCESS_TOKEN" = "your_token_here" }
@@ -123,8 +135,8 @@ export GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token)
    - Command: `gh api user --jq .login`
    - Expect: The authenticated username is printed on stdout.
 2. **Verify MCP Server Invocation**:
-   - Command: `GITHUB_PERSONAL_ACCESS_TOKEN=$GITHUB_PERSONAL_ACCESS_TOKEN npx -y @modelcontextprotocol/server-github`
-   - Expect: The process starts, prints standard JSON-RPC handshake messages, and awaits input. It must not exit with a token verification error.
+   - Command: `docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server`
+   - Expect: The image pulls (first run), the process starts, announces the stdio server on stderr, and awaits JSON-RPC input. It must not exit with a token verification error. Terminate with Ctrl-C / EOF.
 
 ---
 

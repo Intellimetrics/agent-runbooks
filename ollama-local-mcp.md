@@ -10,6 +10,9 @@ After completing this setup, you gain the ability to call local models for priva
 - **Cost Minimization**: Run low-stakes or high-volume agent reviews at zero API token cost.
 - **Data Privacy**: Process files and codebases completely offline.
 
+> [!NOTE]
+> **Already running llm-council?** It consumes Ollama natively (`type: ollama` participants, `private-local` / `local-only` modes) — no MCP server is needed for the multi-agent-review use case. Configure the MCP server below only when the host agent needs direct local inference. See `llm-council-mcp.md`.
+
 ---
 
 ## 🎯 Target Audience (Agents Only)
@@ -51,12 +54,13 @@ JSON snippet to merge:
       "command": "npx",
       "args": [
         "-y",
-        "ollama-mcp-server"
+        "ollama-mcp-server@1.1.0"
       ]
     }
   }
 }
 ```
+*Note: `ollama-mcp-server` is a community package — pin the version (as above) rather than tracking latest, and review the package before upgrading the pin.*
 
 ### 2. Codex
 - **Global path**: `~/.codex/config.toml`
@@ -68,7 +72,7 @@ TOML table to merge:
 command = "npx"
 args = [
   "-y",
-  "ollama-mcp-server"
+  "ollama-mcp-server@1.1.0"
 ]
 ```
 
@@ -84,11 +88,11 @@ If not already running, spawn the background server daemon:
   `ollama serve >/tmp/ollama.log 2>&1 &` (or open the Ollama app)
 
 ### 2. Pull the Target Model
-Pull the recommended programming model:
+Pull the recommended lightweight programming model:
 ```bash
 ollama pull qwen2.5-coder:7b
 ```
-*Note: This command runs synchronously. Wait for the model pull to complete before proceeding.*
+*Note: This command runs synchronously. Wait for the model pull to complete before proceeding. On machines with ample VRAM/RAM, prefer a current-generation coder model (e.g. `qwen3-coder:30b`) — adjust the Phase 4 checks to match whichever model you pull.*
 
 ---
 

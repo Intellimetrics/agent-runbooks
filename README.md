@@ -25,9 +25,9 @@ Once prompted, the agent will follow the 5 phases inside the runbook without fur
 
 - 🌐 **[chrome-devtools-mcp](chrome-devtools-mcp.md)** — Set up, launch, and drive a CDP-speaking browser (Chrome or Microsoft Edge) locally or over a secure SSH tunnel. Exposes standard and custom configuration blocks for Antigravity, Claude Code, and Codex.
 - 🏛️ **[llm-council-mcp](llm-council-mcp.md)** — Install, set up, and run `llm-council` as an MCP server or CLI tool. Enables multi-agent consensus audits of implementation plans, specifications, task lists, and source code changes.
-- 🗄️ **[postgres-mcp](postgres-mcp.md)** — Set up PostgreSQL/MySQL database access via `@modelcontextprotocol/server-postgres`, local Docker databases, or SSH tunnels.
+- 🗄️ **[postgres-mcp](postgres-mcp.md)** — Set up PostgreSQL database access via the CrystalDBA `postgres-mcp` server, local Docker databases, or SSH tunnels.
 - 🦙 **[ollama-local-mcp](ollama-local-mcp.md)** — Configure local model inference (Ollama) as a private developer companion for offline generation.
-- 🐙 **[github-mcp](github-mcp.md)** — Set up repository metadata access and pull request creation via `@modelcontextprotocol/server-github`.
+- 🐙 **[github-mcp](github-mcp.md)** — Set up repository metadata access and pull request creation via GitHub's official `github-mcp-server` (local Docker or hosted remote).
 - 📦 **[docker-sandbox-executor](docker-sandbox-executor.md)** — Configure safe, sandboxed script and command execution via local Docker containers.
 - 🌱 **[spec-kit-sdd](spec-kit-sdd.md)** — Scaffolds Spec-Driven Development (SDD) inside active repositories using Specify CLI.
 - 🧪 **[automated-testing-runbook](automated-testing-runbook.md)** — Set up Playwright for robust browser-based End-to-End (E2E) testing.
