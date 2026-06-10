@@ -28,12 +28,13 @@ Once prompted, the agent will follow the 5 phases inside the runbook without fur
 - 🗄️ **[postgres-mcp](postgres-mcp.md)** — Set up PostgreSQL database access via the CrystalDBA `postgres-mcp` server, local Docker databases, or SSH tunnels.
 - 🦙 **[ollama-local-mcp](ollama-local-mcp.md)** — Configure local model inference (Ollama) as a private developer companion for offline generation.
 - 🐙 **[github-mcp](github-mcp.md)** — Set up repository metadata access and pull request creation via GitHub's official `github-mcp-server` (local Docker or hosted remote).
-- 📦 **[docker-sandbox-executor](docker-sandbox-executor.md)** — Configure safe, sandboxed script and command execution via local Docker containers.
 - 🌱 **[spec-kit-sdd](spec-kit-sdd.md)** — Scaffolds Spec-Driven Development (SDD) inside active repositories using Specify CLI.
 - 🧪 **[automated-testing-runbook](automated-testing-runbook.md)** — Set up Playwright for robust browser-based End-to-End (E2E) testing.
 - 🌳 **[gitflow-runbook](gitflow-runbook.md)** — Agent-executable instructions for managing feature branches and PRs using a Gitflow-inspired model and `gh` CLI.
 - 📝 **[plan-to-plan-runbook](plan-to-plan-runbook.md)** — Meta-workflow guiding agents to break down large, ambiguous requests into smaller planning sessions instead of jumping straight into coding.
 - 🤖 **[orchestrator-subagent-runbook](orchestrator-subagent-runbook.md)** — Strategies and execution steps for orchestrator agents to delegate discrete tasks to subagents, preserving their 200k+ token context windows.
+- 🚢 **[release-checklist-runbook](release-checklist-runbook.md)** — Test-gated release flow for projects whose version string lives in multiple files (pyproject, package `__version__`, README badge, CHANGELOG): bump every sync point, tag, push, verify.
+- 📜 **[agent-instructions-runbook](agent-instructions-runbook.md)** — Wire the global and project instruction files each CLI reads (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`) and merge tool snippets idempotently without clobbering existing content.
 
 ---
 
