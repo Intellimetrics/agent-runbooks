@@ -28,6 +28,7 @@ Once prompted, the agent will follow the 5 phases inside the runbook without fur
 - 🗄️ **[postgres-mcp](postgres-mcp.md)** — Set up PostgreSQL database access via the CrystalDBA `postgres-mcp` server, local Docker databases, or SSH tunnels.
 - 🦙 **[ollama-local-mcp](ollama-local-mcp.md)** — Configure local model inference (Ollama) as a private developer companion for offline generation.
 - 🐙 **[github-mcp](github-mcp.md)** — Set up repository metadata access and pull request creation via GitHub's official `github-mcp-server` (local Docker or hosted remote).
+- **[hermes-tweet-runbook](hermes-tweet-runbook.md)** - Install and verify Hermes Tweet as a native Hermes Agent X/Twitter toolset with read-first and approval-gated action workflows.
 - 🌱 **[spec-kit-sdd](spec-kit-sdd.md)** — Scaffolds Spec-Driven Development (SDD) inside active repositories using Specify CLI.
 - 🧪 **[automated-testing-runbook](automated-testing-runbook.md)** — Set up Playwright for robust browser-based End-to-End (E2E) testing.
 - 🌳 **[gitflow-runbook](gitflow-runbook.md)** — Agent-executable instructions for managing feature branches and PRs using a Gitflow-inspired model and `gh` CLI.
